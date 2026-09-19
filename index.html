@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow - Pengingat Tugas, Jadwal Kuliah & Seminar/Workshop</title>
+    <meta name="description" content="Aplikasi pengingat tugas kuliah, jadwal mata kuliah harian, dan informasi utama seminar & workshop untuk mahasiswa.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK (v10 Modular via CDN) -->
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js"></script>
+    <script type="module" src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>Campus<span>Flow</span></h2>
+                    <p>Student Hub & Reminder</p>
+                </div>
+            </div>
+
+            <!-- Cloud DB Status Badge -->
+            <div class="db-status-container">
+                <div class="db-status-pill" id="db-status-pill" title="Klik untuk Pengaturan Cloud DB">
+                    <span class="status-dot green" id="status-dot"></span>
+                    <span id="db-status-text">Cloud Sync (Firebase)</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard Utama</span>
+                </a>
+                <a href="#seminar" class="nav-item highlight-nav" data-tab="seminar">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>Seminar & Workshop</span>
+                    <span class="nav-badge" id="seminar-count-badge">0</span>
+                </a>
+                <a href="#tugas" class="nav-item" data-tab="tugas">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Pengingat Tugas</span>
+                    <span class="nav-badge alert" id="tugas-count-badge">0</span>
+                </a>
+                <a href="#jadwal" class="nav-item" data-tab="jadwal">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <span>Jadwal Kuliah</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile" id="user-profile-trigger" title="Klik untuk Edit Profil Saya">
+                    <div class="avatar" id="sidebar-avatar-box">
+                        <i class="fa-solid fa-user-graduate" id="sidebar-avatar-icon"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name" id="sidebar-user-name">Mahasiswa Aktif</span>
+                        <span class="user-role" id="sidebar-user-role">Teknik Informatika</span>
+                    </div>
+                </div>
+                <div class="action-buttons-mini">
+                    <button class="btn-icon" id="btn-edit-profile-mini" title="Edit Profil Saya">
+                        <i class="fa-solid fa-user-pen"></i>
+                    </button>
+                    <button class="btn-icon" id="theme-toggle" title="Ubah Tema (Gelap/Terang)">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <button class="btn-icon" id="settings-btn" title="Pengaturan & Backup Data">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="mobile-toggle" id="mobile-toggle">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="greeting-box">
+                        <h1 id="greeting-text">Selamat Datang, Mahasiswa! 👋</h1>
+                        <p id="full-date-display"><i class="fa-regular fa-calendar"></i> Loading tanggal...</p>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <button class="btn btn-secondary btn-sm" id="btn-toggle-notif" title="Aktifkan Notifikasi Pop-up HP / Browser">
+                        <i class="fa-solid fa-bell-slash" id="notif-btn-icon"></i>
+                        <span id="notif-btn-text">Aktifkan Notifikasi HP</span>
+                    </button>
+                    <div class="quick-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="global-search" placeholder="Cari seminar, tugas, matkul...">
+                    </div>
+                    <div class="dropdown-add">
+                        <button class="btn btn-primary" id="btn-quick-add">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Tambah Baru</span>
+                        </button>
+                        <div class="add-menu" id="quick-add-menu">
+                            <button data-action="add-seminar"><i class="fa-solid fa-chalkboard-user text-purple"></i> Seminar / Workshop</button>
+                            <button data-action="add-tugas"><i class="fa-solid fa-tasks text-pink"></i> Tugas Kuliah</button>
+                            <button data-action="add-jadwal"><i class="fa-solid fa-book-open text-blue"></i> Jadwal Matkul</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- TAB 1: DASHBOARD UTAMA -->
+            <section id="tab-dashboard" class="tab-content active">
+                <!-- Highlight Utama Banner (Prioritas Seminar/Workshop Hari Ini) -->
+                <div class="hero-banner" id="hero-today-banner">
+                    <!-- Dynamic Javascript Content Loaded Here -->
+                </div>
+
+                <!-- Quick Stats Overview Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card accent-purple">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-laptop-code"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Seminar & Workshop</span>
+                            <h3 id="stat-total-seminar">0 Event</h3>
+                            <span class="stat-sub" id="stat-today-seminar">0 event hari ini</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card accent-pink">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Tugas Pending</span>
+                            <h3 id="stat-pending-tugas">0 Tugas</h3>
+                            <span class="stat-sub alert-text" id="stat-urgent-tugas">0 mendesak</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card accent-blue">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Kuliah Hari Ini</span>
+                            <h3 id="stat-today-classes">0 Mata Kuliah</h3>
+                            <span class="stat-sub" id="stat-next-class">Tidak ada kelas</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card accent-green">
+                        <div class="stat-icon">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Tugas Selesai</span>
+                            <h3 id="stat-completed-tugas">0/0</h3>
+                            <div class="mini-progress">
+                                <div class="progress-bar" id="stat-progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2 Column Section: Today's Schedule & Urgent Tasks -->
+                <div class="dashboard-grid">
+                    <!-- Left: Combined Schedule Today -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div>
+                                <h3><i class="fa-solid fa-calendar-day text-blue"></i> Jadwal Acara Hari Ini</h3>
+                                <p class="section-desc">Gabungan jadwal kuliah dan workshop/seminar hari ini</p>
+                            </div>
+                            <span class="badge badge-info" id="today-name-badge">Hari Ini</span>
+                        </div>
+                        <div class="card-body" id="dashboard-today-list">
+                            <!-- JS Population -->
+                        </div>
+                    </div>
+
+                    <!-- Right: Urgent Tasks -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <div>
+                                <h3><i class="fa-solid fa-fire text-pink"></i> Tugas Mendekati Deadline</h3>
+                                <p class="section-desc">Prioritas tugas yang harus segera diselesaikan</p>
+                            </div>
+                            <a href="#tugas" class="link-btn switch-tab" data-target="tugas">Lihat Semua</a>
+                        </div>
+                        <div class="card-body" id="dashboard-urgent-tasks">
+                            <!-- JS Population -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upcoming Seminars & Workshops Carousel/List -->
+                <div class="glass-card section-margin">
+                    <div class="card-header">
+                        <div>
+                            <h3><i class="fa-solid fa-star text-purple"></i> Agenda Seminar & Workshop Mendatang</h3>
+                            <p class="section-desc">Jangan lewatkan event pengembangan skill dan akademik Anda</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm switch-tab" data-target="seminar">
+                            <i class="fa-solid fa-plus"></i> Kelola Event
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="seminar-horizontal-scroll" id="dashboard-upcoming-seminars">
+                            <!-- JS Population -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: SEMINAR & WORKSHOP (MAIN FOCUS) -->
+            <section id="tab-seminar" class="tab-content">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-chalkboard-user text-purple"></i> Jadwal Seminar & Workshop</h2>
+                        <p>Kelola dan pantau seluruh acara workshop, webinar, dan seminar akademik Anda.</p>
+                    </div>
+                    <button class="btn btn-purple" id="btn-add-seminar">
+                        <i class="fa-solid fa-plus"></i> Tambah Seminar / Workshop
+                    </button>
+                </div>
+
+                <!-- Filters & Search Toolbar -->
+                <div class="toolbar-card">
+                    <div class="filter-tabs" id="seminar-filter-tabs">
+                        <button class="filter-btn active" data-filter="all">Semua Event</button>
+                        <button class="filter-btn" data-filter="today">Hari Ini 🔥</button>
+                        <button class="filter-btn" data-filter="upcoming">Akan Datang ⏳</button>
+                        <button class="filter-btn" data-filter="completed">Selesai / Past</button>
+                    </div>
+                    <div class="filter-controls">
+                        <select id="seminar-type-filter" class="form-select">
+                            <option value="all">Semua Tipe</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Seminar">Seminar</option>
+                            <option value="Webinar">Webinar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Seminar Cards Grid -->
+                <div class="seminar-grid" id="seminar-main-grid">
+                    <!-- JS Population -->
+                </div>
+            </section>
+
+            <!-- TAB 3: PENGINGAT TUGAS -->
+            <section id="tab-tugas" class="tab-content">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-list-check text-pink"></i> Pengingat Tugas Kuliah</h2>
+                        <p>Daftar tugas perkuliahan, kuis, proyek akhir, dan laporan praktikum.</p>
+                    </div>
+                    <button class="btn btn-pink" id="btn-add-tugas">
+                        <i class="fa-solid fa-plus"></i> Tambah Tugas Baru
+                    </button>
+                </div>
+
+                <!-- Filters Toolbar -->
+                <div class="toolbar-card">
+                    <div class="filter-tabs" id="tugas-filter-tabs">
+                        <button class="filter-btn active" data-filter="all">Semua Status</button>
+                        <button class="filter-btn" data-filter="pending">Belum Selesai</button>
+                        <button class="filter-btn" data-filter="in_progress">Sedang Dikerjakan</button>
+                        <button class="filter-btn" data-filter="completed">Selesai ✅</button>
+                    </div>
+                    <div class="filter-controls">
+                        <select id="tugas-priority-filter" class="form-select">
+                            <option value="all">Semua Prioritas</option>
+                            <option value="Tinggi">Prioritas Tinggi 🔥</option>
+                            <option value="Sedang">Prioritas Sedang</option>
+                            <option value="Rendah">Prioritas Rendah</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Task List Container -->
+                <div class="tasks-container" id="tugas-main-list">
+                    <!-- JS Population -->
+                </div>
+            </section>
+
+            <!-- TAB 4: JADWAL KULIAH -->
+            <section id="tab-jadwal" class="tab-content">
+                <div class="section-header">
+                    <div>
+                        <h2><i class="fa-solid fa-calendar-days text-blue"></i> Jadwal Perkuliahan Mingguan</h2>
+                        <p>Jadwal rutin mata kuliah, waktu perkuliahan, dan dosen pengampu.</p>
+                    </div>
+                    <button class="btn btn-blue" id="btn-add-jadwal">
+                        <i class="fa-solid fa-plus"></i> Tambah Matkul
+                    </button>
+                </div>
+
+                <!-- Day Selector Tabs -->
+                <div class="day-tabs" id="day-selector-tabs">
+                    <button class="day-btn" data-day="Senin">Senin</button>
+                    <button class="day-btn" data-day="Selasa">Selasa</button>
+                    <button class="day-btn" data-day="Rabu">Rabu</button>
+                    <button class="day-btn" data-day="Kamis">Kamis</button>
+                    <button class="day-btn" data-day="Jumat">Jumat</button>
+                    <button class="day-btn" data-day="Sabtu">Sabtu</button>
+                    <button class="day-btn" data-day="Minggu">Minggu</button>
+                </div>
+
+                <div class="schedule-container" id="jadwal-main-list">
+                    <!-- JS Population -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: TAMBAH / EDIT SEMINAR & WORKSHOP -->
+    <div class="modal" id="modal-seminar">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3 id="modal-seminar-title"><i class="fa-solid fa-chalkboard-user text-purple"></i> Tambah Seminar / Workshop</h3>
+                <button class="btn-close" data-close="modal-seminar">&times;</button>
+            </div>
+            <form id="form-seminar">
+                <input type="hidden" id="seminar-id">
+                <div class="form-group">
+                    <label for="seminar-judul">Judul Event / Acara *</label>
+                    <input type="text" id="seminar-judul" class="form-control" placeholder="Contoh: Workshop AI & Machine Learning for Student" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="seminar-tipe">Tipe Event *</label>
+                        <select id="seminar-tipe" class="form-select" required>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Seminar">Seminar</option>
+                            <option value="Webinar">Webinar</option>
+                            <option value="Sertifikasi">Sertifikasi / Bootcamp</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="seminar-penyelenggara">Pemateri / Penyelenggara</label>
+                        <input type="text" id="seminar-penyelenggara" class="form-control" placeholder="Contoh: BEM FT / Dr. Ir. Tech">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="seminar-tanggal">Tanggal Event *</label>
+                        <input type="date" id="seminar-tanggal" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="seminar-waktu">Waktu Mulai *</label>
+                        <input type="time" id="seminar-waktu" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="seminar-lokasi">Lokasi / Link Zoom *</label>
+                    <input type="text" id="seminar-lokasi" class="form-control" placeholder="Contoh: https://zoom.us/j/12345 atau Ruang Auditorium Lt. 3" required>
+                </div>
+                <div class="form-group">
+                    <label for="seminar-link-sertifikat">Link Pendaftaran / Material / Sertifikat</label>
+                    <input type="url" id="seminar-link-sertifikat" class="form-control" placeholder="https://drive.google.com/... (Opsional)">
+                </div>
+                <div class="form-group">
+                    <label for="seminar-catatan">Catatan / Detail Tambahan</label>
+                    <textarea id="seminar-catatan" class="form-control" rows="3" placeholder="Poin penting, fasilitas e-certificate, prasarat software..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-seminar">Batal</button>
+                    <button type="submit" class="btn btn-purple">Simpan Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: TAMBAH / EDIT TUGAS KULIAH -->
+    <div class="modal" id="modal-tugas">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3 id="modal-tugas-title"><i class="fa-solid fa-list-check text-pink"></i> Tambah Tugas Kuliah</h3>
+                <button class="btn-close" data-close="modal-tugas">&times;</button>
+            </div>
+            <form id="form-tugas">
+                <input type="hidden" id="tugas-id">
+                <div class="form-group">
+                    <label for="tugas-judul">Nama Tugas / Topik *</label>
+                    <input type="text" id="tugas-judul" class="form-control" placeholder="Contoh: Laporan Praktikum Jaringan Komputer" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tugas-matkul">Mata Kuliah *</label>
+                        <input type="text" id="tugas-matkul" class="form-control" placeholder="Contoh: Pemrograman Web II" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tugas-prioritas">Tingkat Prioritas *</label>
+                        <select id="tugas-prioritas" class="form-select" required>
+                            <option value="Tinggi">Tinggi (Penting & Mendesak 🔥)</option>
+                            <option value="Sedang" selected>Sedang</option>
+                            <option value="Rendah">Rendah</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tugas-deadline-date">Tanggal Deadline *</label>
+                        <input type="date" id="tugas-deadline-date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tugas-deadline-time">Jam Deadline *</label>
+                        <input type="time" id="tugas-deadline-time" class="form-control" value="23:59" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="tugas-status">Status Pengerjaan *</label>
+                    <select id="tugas-status" class="form-select" required>
+                        <option value="pending">Belum Dikerjakan</option>
+                        <option value="in_progress">Sedang Dikerjakan</option>
+                        <option value="completed">Selesai</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tugas-deskripsi">Deskripsi / Instruksi Tugas</label>
+                    <textarea id="tugas-deskripsi" class="form-control" rows="3" placeholder="Detail petunjuk tugas, format file (PDF/Zip), instruksi pengumpulan..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-tugas">Batal</button>
+                    <button type="submit" class="btn btn-pink">Simpan Tugas</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: TAMBAH / EDIT JADWAL KULIAH -->
+    <div class="modal" id="modal-jadwal">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3 id="modal-jadwal-title"><i class="fa-solid fa-calendar-days text-blue"></i> Tambah Jadwal Kuliah</h3>
+                <button class="btn-close" data-close="modal-jadwal">&times;</button>
+            </div>
+            <form id="form-jadwal">
+                <input type="hidden" id="jadwal-id">
+                <div class="form-group">
+                    <label for="jadwal-matkul">Nama Mata Kuliah *</label>
+                    <input type="text" id="jadwal-matkul" class="form-control" placeholder="Contoh: Algoritma & Pemrograman" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="jadwal-hari">Hari Pertemuan *</label>
+                        <select id="jadwal-hari" class="form-select" required>
+                            <option value="Senin">Senin</option>
+                            <option value="Selasa">Selasa</option>
+                            <option value="Rabu">Rabu</option>
+                            <option value="Kamis">Kamis</option>
+                            <option value="Jumat">Jumat</option>
+                            <option value="Sabtu">Sabtu</option>
+                            <option value="Minggu">Minggu</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="jadwal-dosen">Dosen Pengampu</label>
+                        <input type="text" id="jadwal-dosen" class="form-control" placeholder="Contoh: Dr. Budi Santoso, M.Kom">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="jadwal-jam-mulai">Jam Mulai *</label>
+                        <input type="time" id="jadwal-jam-mulai" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="jadwal-jam-selesai">Jam Selesai *</label>
+                        <input type="time" id="jadwal-jam-selesai" class="form-control" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="jadwal-ruangan">Ruangan / Link Kuliah Online</label>
+                    <input type="text" id="jadwal-ruangan" class="form-control" placeholder="Contoh: Ruang Lab Komputer 2 / Zoom Meeting Link">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-jadwal">Batal</button>
+                    <button type="submit" class="btn btn-blue">Simpan Jadwal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SETTINGS & BACKUP DATA -->
+    <div class="modal" id="modal-settings">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-gear text-purple"></i> Pengaturan & Backup Data</h3>
+                <button class="btn-close" data-close="modal-settings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <div>
+                        <h4>Muat Ulang Data Sampel</h4>
+                        <p>Mengembalikan data awal (contoh jadwal kuliah, seminar, dan tugas).</p>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-reset-sample">Reset Data Sampel</button>
+                </div>
+                <hr class="divider">
+                <div class="firebase-settings-box">
+                    <div class="firebase-header">
+                        <h4><i class="fa-solid fa-cloud text-purple"></i> Pengaturan Firebase Cloud Database</h4>
+                        <span class="badge badge-purple" id="firebase-status-badge">Default Demo Config</span>
+                    </div>
+                    <p class="setting-subtext">Agar website tersimpan permanen di cloud saat dideploy ke <b>GitHub Pages</b>, Anda dapat menggunakan config Firebase pribadi (100% Gratis selamanya).</p>
+                    
+                    <form id="form-firebase-config" style="margin-top:0.75rem;">
+                        <div class="form-group">
+                            <label for="fb-apiKey">API Key</label>
+                            <input type="text" id="fb-apiKey" class="form-control" placeholder="AIzaSy...">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fb-authDomain">Auth Domain</label>
+                                <input type="text" id="fb-authDomain" class="form-control" placeholder="app-id.firebaseapp.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb-projectId">Project ID</label>
+                                <input type="text" id="fb-projectId" class="form-control" placeholder="app-id">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fb-storageBucket">Storage Bucket</label>
+                                <input type="text" id="fb-storageBucket" class="form-control" placeholder="app-id.appspot.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="fb-appId">App ID</label>
+                                <input type="text" id="fb-appId" class="form-control" placeholder="1:12345:web:abcde">
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
+                            <a href="README.md" target="_blank" class="link-btn"><i class="fa-solid fa-book"></i> Lihat Panduan GitHub Pages</a>
+                            <button type="submit" class="btn btn-purple btn-sm"><i class="fa-solid fa-floppy-disk"></i> Simpan Firebase Config</button>
+                        </div>
+                    </form>
+                </div>
+                <hr class="divider">
+                <div class="setting-item">
+                    <div>
+                        <h4>Export Data (Backup JSON)</h4>
+                        <p>Unduh seluruh data jadwal, tugas, dan seminar ke file JSON.</p>
+                    </div>
+                    <button class="btn btn-purple" id="btn-export-data"><i class="fa-solid fa-download"></i> Export Data</button>
+                </div>
+                <hr class="divider">
+                <div class="setting-item">
+                    <div>
+                        <h4>Uji Coba Notifikasi HP</h4>
+                        <p>Kirimkan notifikasi contoh ke sistem/HP Anda untuk menguji.</p>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-test-notif"><i class="fa-solid fa-bell text-purple"></i> Test Notifikasi Pop-up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT PROFIL MAHASISWA -->
+    <div class="modal" id="modal-profile">
+        <div class="modal-content glass-modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-pen text-purple"></i> Edit Profil Saya</h3>
+                <button class="btn-close" data-close="modal-profile">&times;</button>
+            </div>
+            <form id="form-profile">
+                <div class="form-group">
+                    <label for="profile-name">Nama Lengkap Mahasiswa *</label>
+                    <input type="text" id="profile-name" class="form-control" placeholder="Contoh: Ahmad Fauzi" required>
+                </div>
+                <div class="form-group">
+                    <label for="profile-role">Jurusan / Program Studi / Fakultas *</label>
+                    <input type="text" id="profile-role" class="form-control" placeholder="Contoh: Teknik Informatika - S1" required>
+                </div>
+                <div class="form-group">
+                    <label>Pilih Icon Avatar Profil</label>
+                    <div class="avatar-selection" id="avatar-selector">
+                        <button type="button" class="avatar-option active" data-icon="fa-user-graduate"><i class="fa-solid fa-user-graduate"></i></button>
+                        <button type="button" class="avatar-option" data-icon="fa-laptop-code"><i class="fa-solid fa-laptop-code"></i></button>
+                        <button type="button" class="avatar-option" data-icon="fa-user-astronaut"><i class="fa-solid fa-user-astronaut"></i></button>
+                        <button type="button" class="avatar-option" data-icon="fa-robot"><i class="fa-solid fa-robot"></i></button>
+                        <button type="button" class="avatar-option" data-icon="fa-brain"><i class="fa-solid fa-brain"></i></button>
+                        <button type="button" class="avatar-option" data-icon="fa-crown"><i class="fa-solid fa-crown"></i></button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-close="modal-profile">Batal</button>
+                    <button type="submit" class="btn btn-purple"><i class="fa-solid fa-floppy-disk"></i> Simpan Profil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>
