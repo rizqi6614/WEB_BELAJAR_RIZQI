@@ -557,20 +557,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('today-name-badge').textContent = `Hari Ini (${todayDayName})`;
     };
 
-    // Badges in Sidebar
+    // Badges in Sidebar & Mobile Nav
     const updateBadges = () => {
         const todaySeminars = state.seminars.filter(s => s.tanggal === todayStr);
         const pendingTugas = state.tugas.filter(t => t.status !== 'completed');
         
         const semBadge = document.getElementById('seminar-count-badge');
-        semBadge.textContent = todaySeminars.length > 0 ? `${todaySeminars.length} HARI INI` : state.seminars.length;
-        if (todaySeminars.length > 0) {
-            semBadge.classList.add('alert');
-        } else {
-            semBadge.classList.remove('alert');
+        const mobSemBadge = document.getElementById('mobile-seminar-badge');
+        const semText = todaySeminars.length > 0 ? `${todaySeminars.length} HARI INI` : state.seminars.length;
+        if (semBadge) semBadge.textContent = semText;
+        if (mobSemBadge) mobSemBadge.textContent = todaySeminars.length > 0 ? `${todaySeminars.length}` : state.seminars.length;
+
+        if (semBadge) {
+            if (todaySeminars.length > 0) semBadge.classList.add('alert');
+            else semBadge.classList.remove('alert');
         }
 
-        document.getElementById('tugas-count-badge').textContent = pendingTugas.length;
+        const tugBadge = document.getElementById('tugas-count-badge');
+        const mobTugBadge = document.getElementById('mobile-tugas-badge');
+        if (tugBadge) tugBadge.textContent = pendingTugas.length;
+        if (mobTugBadge) mobTugBadge.textContent = pendingTugas.length;
     };
 
     // HERO BANNER RENDERER (PRIORITAS SEMINAR & WORKSHOP HARI INI)
@@ -1317,7 +1323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const switchTab = (tabName) => {
         state.activeTab = tabName;
-        document.querySelectorAll('.nav-item').forEach(nav => {
+        document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(nav => {
             if (nav.dataset.tab === tabName) {
                 nav.classList.add('active');
             } else {
@@ -1336,7 +1342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.querySelectorAll('.nav-item').forEach(item => {
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             switchTab(item.dataset.tab);

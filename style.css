@@ -1461,6 +1461,63 @@ label {
 .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
 .empty-state h4 { font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.3rem; }
 
+/* Mobile Bottom Navigation Bar (Default Hidden on Desktop) */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--bg-modal);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 999;
+    padding: 0.5rem 0.75rem;
+    backdrop-filter: blur(16px);
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.4rem 0.2rem;
+    border-radius: var(--radius-sm);
+    position: relative;
+    transition: var(--transition);
+}
+
+.mobile-nav-item i {
+    font-size: 1.25rem;
+}
+
+.mobile-nav-item.active {
+    color: white;
+    background: var(--accent-purple-gradient);
+    box-shadow: var(--shadow-glow);
+}
+
+.mobile-nav-badge {
+    position: absolute;
+    top: 2px;
+    right: 14%;
+    background: var(--accent-purple);
+    color: white;
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--radius-full);
+    font-weight: 800;
+}
+
+.mobile-nav-badge.alert {
+    background: var(--accent-pink);
+}
+
 /* Responsive Media Queries */
 @media (max-width: 992px) {
     .sidebar {
@@ -1481,23 +1538,45 @@ label {
     }
 }
 
-@media (max-width: 600px) {
-    .hero-body {
-        flex-direction: column;
-        align-items: flex-start;
+@media (max-width: 768px) {
+    .mobile-bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
     }
-    .form-row {
-        grid-template-columns: 1fr;
+    .main-content {
+        padding-bottom: 5.5rem;
     }
     .top-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        gap: 0.85rem;
     }
     .header-right {
         width: 100%;
-        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
     .quick-search {
         width: 100%;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    .seminar-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .hero-banner {
+        padding: 1.25rem;
+    }
+    .hero-info h2 {
+        font-size: 1.35rem;
     }
 }
