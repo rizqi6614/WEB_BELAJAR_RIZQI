@@ -363,38 +363,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Realtime Cloud Listener Engine
+    // Deleted Items Tracker to prevent stale remote snapshots from resurrecting deleted items
+    let deletedIds = new Set(JSON.parse(localStorage.getItem('campusflow_deleted_ids') || '[]'));
+
+    const markAsDeleted = (id) => {
+        deletedIds.add(id);
+        localStorage.setItem('campusflow_deleted_ids', JSON.stringify(Array.from(deletedIds)));
+    };
+
+    const mergeSmartList = (localList, remoteList) => {
+        const map = new Map();
+        // Add local items first
+        (localList || []).forEach(item => {
+            if (item && item.id && !deletedIds.has(item.id)) {
+                map.set(item.id, item);
+            }
+        });
+        // Add remote items (overwrites local if updated, unless deleted)
+        (remoteList || []).forEach(item => {
+            if (item && item.id && !deletedIds.has(item.id)) {
+                map.set(item.id, item);
+            }
+        });
+        return Array.from(map.values());
+    };
+
+    // Realtime Cloud Listener Engine with Smart Union Merge
     const setupRealtimeListeners = () => {
         if (!db || !fbOnSnapshot) return;
         try {
             fbOnSnapshot(fbCollection(db, 'seminars'), (snapshot) => {
                 const list = [];
                 snapshot.forEach(doc => list.push(doc.data()));
-                if (list.length > 0) {
-                    state.seminars = list;
-                    saveToLocalStorage();
-                    renderAll();
-                }
+                state.seminars = mergeSmartList(state.seminars, list);
+                saveToLocalStorage();
+                renderAll();
             });
 
             fbOnSnapshot(fbCollection(db, 'tugas'), (snapshot) => {
                 const list = [];
                 snapshot.forEach(doc => list.push(doc.data()));
-                if (list.length > 0) {
-                    state.tugas = list;
-                    saveToLocalStorage();
-                    renderAll();
-                }
+                state.tugas = mergeSmartList(state.tugas, list);
+                saveToLocalStorage();
+                renderAll();
             });
 
             fbOnSnapshot(fbCollection(db, 'jadwal'), (snapshot) => {
                 const list = [];
                 snapshot.forEach(doc => list.push(doc.data()));
-                if (list.length > 0) {
-                    state.jadwal = list;
-                    saveToLocalStorage();
-                    renderAll();
-                }
+                state.jadwal = mergeSmartList(state.jadwal, list);
+                saveToLocalStorage();
+                renderAll();
             });
         } catch (e) {
             console.warn('Realtime snapshot listener notice:', e);
@@ -424,7 +443,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Load Data from Firebase Firestore (Merge with Local Data)
+    // Load Data from Firebase Firestore (Merge Smartly with Local Data)
     const loadFromFirebase = async () => {
         if (!db) return;
         try {
@@ -441,20 +460,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const fetchedJadwal = [];
             jadSnap.forEach(d => fetchedJadwal.push(d.data()));
 
-            if (fetchedSeminars.length > 0 || fetchedTugas.length > 0 || fetchedJadwal.length > 0) {
-                // Merge fetched items with existing state
-                if (fetchedSeminars.length > 0) state.seminars = fetchedSeminars;
-                if (fetchedTugas.length > 0) state.tugas = fetchedTugas;
-                if (fetchedJadwal.length > 0) state.jadwal = fetchedJadwal;
-                saveToLocalStorage();
-            } else {
-                // Cloud DB is empty -> Push current local state to Cloud DB
-                await syncAllToCloud();
-            }
+            if (fetchedSeminars.length > 0) state.seminars = mergeSmartList(state.seminars, fetchedSeminars);
+            if (fetchedTugas.length > 0) state.tugas = mergeSmartList(state.tugas, fetchedTugas);
+            if (fetchedJadwal.length > 0) state.jadwal = mergeSmartList(state.jadwal, fetchedJadwal);
+            
+            saveToLocalStorage();
+            await syncAllToCloud();
             renderAll();
         } catch (e) {
             console.error('Error fetching from Firestore:', e);
-            // Fallback to local data
             renderAll();
         }
     };
@@ -470,9 +484,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (stored) {
             try {
                 const parsed = JSON.parse(stored);
-                state.seminars = parsed.seminars || [];
-                state.tugas = parsed.tugas || [];
-                state.jadwal = parsed.jadwal || [];
+                state.seminars = (parsed.seminars || []).filter(item => !deletedIds.has(item.id));
+                state.tugas = (parsed.tugas || []).filter(item => !deletedIds.has(item.id));
+                state.jadwal = (parsed.jadwal || []).filter(item => !deletedIds.has(item.id));
             } catch (e) {
                 const initial = getInitialSampleData();
                 state.seminars = initial.seminars;
@@ -495,14 +509,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const saveToLocalStorage = () => {
         localStorage.setItem('campusflow_data', JSON.stringify({
-            seminars: state.seminars,
-            tugas: state.tugas,
-            jadwal: state.jadwal
+            seminars: state.seminars.filter(item => !deletedIds.has(item.id)),
+            tugas: state.tugas.filter(item => !deletedIds.has(item.id)),
+            jadwal: state.jadwal.filter(item => !deletedIds.has(item.id))
         }));
         localStorage.setItem('campusflow_profile', JSON.stringify(state.profile));
     };
 
     const saveItemToCloud = async (collectionName, item) => {
+        // If it was previously marked as deleted, unmark it
+        if (deletedIds.has(item.id)) {
+            deletedIds.delete(item.id);
+            localStorage.setItem('campusflow_deleted_ids', JSON.stringify(Array.from(deletedIds)));
+        }
+
         saveToLocalStorage();
         if (isCloudConnected && db) {
             try {
@@ -515,6 +535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const deleteItemFromCloud = async (collectionName, id) => {
+        markAsDeleted(id);
         saveToLocalStorage();
         if (isCloudConnected && db) {
             try {
