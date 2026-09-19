@@ -295,12 +295,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isCloudConnected = false;
     let fbDoc = null, fbSetDoc = null, fbDeleteDoc = null, fbGetDocs = null, fbCollection = null;
 
+    const defaultFirebaseConfig = {
+        apiKey: "AIzaSyDql30jY-BOeDY_CTkpCaIYKsGXHcxJjV4",
+        authDomain: "web-belajar-2d77c.firebaseapp.com",
+        projectId: "web-belajar-2d77c",
+        storageBucket: "web-belajar-2d77c.firebasestorage.app",
+        messagingSenderId: "749453715954",
+        appId: "1:749453715954:web:91335d958fe0b1bd60a36b",
+        measurementId: "G-YY28SLXB99"
+    };
+
     const initFirebaseCloud = async () => {
         const savedConfigStr = localStorage.getItem('campusflow_firebase_config');
         let fbConfig = null;
 
         if (savedConfigStr) {
             try { fbConfig = JSON.parse(savedConfigStr); } catch (e) { fbConfig = null; }
+        }
+
+        if (!fbConfig) {
+            fbConfig = defaultFirebaseConfig;
         }
 
         if (fbConfig) {
