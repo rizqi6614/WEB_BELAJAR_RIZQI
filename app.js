@@ -305,6 +305,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         measurementId: "G-YY28SLXB99"
     };
 
+    let fbOnSnapshot = null;
+
     const initFirebaseCloud = async () => {
         const savedConfigStr = localStorage.getItem('campusflow_firebase_config');
         let fbConfig = null;
@@ -315,6 +317,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!fbConfig) {
             fbConfig = defaultFirebaseConfig;
+            localStorage.setItem('campusflow_firebase_config', JSON.stringify(defaultFirebaseConfig));
         }
 
         if (fbConfig) {
@@ -331,7 +334,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (fbConfig && fbConfig.projectId && fbConfig.apiKey) {
             try {
                 const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
-                const { getFirestore, doc, setDoc, deleteDoc, getDocs, collection } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
+                const { getFirestore, doc, setDoc, deleteDoc, getDocs, collection, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js');
 
                 const app = initializeApp(fbConfig);
                 db = getFirestore(app);
@@ -341,10 +344,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fbDeleteDoc = deleteDoc;
                 fbGetDocs = getDocs;
                 fbCollection = collection;
+                fbOnSnapshot = onSnapshot;
 
                 isCloudConnected = true;
                 updateDBStatusUI(true, 'Cloud Sync Active ☁️');
-                await loadFromFirebase();
+                
+                // Enable Realtime Snapshots Listener across devices
+                setupRealtimeListeners();
                 return;
             } catch (err) {
                 console.warn('Firebase Cloud connection failed, falling back to Local Storage:', err);
@@ -354,6 +360,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             isCloudConnected = false;
             updateDBStatusUI(false, 'Local Storage Mode');
+        }
+    };
+
+    // Realtime Cloud Listener Engine
+    const setupRealtimeListeners = () => {
+        if (!db || !fbOnSnapshot) return;
+        try {
+            fbOnSnapshot(fbCollection(db, 'seminars'), (snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => list.push(doc.data()));
+                if (list.length > 0) {
+                    state.seminars = list;
+                    saveToLocalStorage();
+                    renderAll();
+                }
+            });
+
+            fbOnSnapshot(fbCollection(db, 'tugas'), (snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => list.push(doc.data()));
+                if (list.length > 0) {
+                    state.tugas = list;
+                    saveToLocalStorage();
+                    renderAll();
+                }
+            });
+
+            fbOnSnapshot(fbCollection(db, 'jadwal'), (snapshot) => {
+                const list = [];
+                snapshot.forEach(doc => list.push(doc.data()));
+                if (list.length > 0) {
+                    state.jadwal = list;
+                    saveToLocalStorage();
+                    renderAll();
+                }
+            });
+        } catch (e) {
+            console.warn('Realtime snapshot listener notice:', e);
         }
     };
 
