@@ -311,6 +311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('fb-appId').value = fbConfig.appId || '';
         }
 
+        // ALWAYS load local data first for instant UI rendering
+        loadFromLocalStorage();
+
         if (fbConfig && fbConfig.projectId && fbConfig.apiKey) {
             try {
                 const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js');
@@ -338,8 +341,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             isCloudConnected = false;
             updateDBStatusUI(false, 'Local Storage Mode');
         }
-
-        loadFromLocalStorage();
     };
 
     const updateDBStatusUI = (connected, text) => {
@@ -365,6 +366,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // Load Data from Firebase Firestore (Merge with Local Data)
     const loadFromFirebase = async () => {
         if (!db) return;
         try {
@@ -382,21 +384,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             jadSnap.forEach(d => fetchedJadwal.push(d.data()));
 
             if (fetchedSeminars.length > 0 || fetchedTugas.length > 0 || fetchedJadwal.length > 0) {
-                state.seminars = fetchedSeminars;
-                state.tugas = fetchedTugas;
-                state.jadwal = fetchedJadwal;
+                // Merge fetched items with existing state
+                if (fetchedSeminars.length > 0) state.seminars = fetchedSeminars;
+                if (fetchedTugas.length > 0) state.tugas = fetchedTugas;
+                if (fetchedJadwal.length > 0) state.jadwal = fetchedJadwal;
                 saveToLocalStorage();
             } else {
-                const initial = getInitialSampleData();
-                state.seminars = initial.seminars;
-                state.tugas = initial.tugas;
-                state.jadwal = initial.jadwal;
+                // Cloud DB is empty -> Push current local state to Cloud DB
                 await syncAllToCloud();
             }
             renderAll();
         } catch (e) {
             console.error('Error fetching from Firestore:', e);
-            loadFromLocalStorage();
+            // Fallback to local data
+            renderAll();
         }
     };
 
@@ -420,13 +421,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 state.tugas = initial.tugas;
                 state.jadwal = initial.jadwal;
                 state.profile = initial.profile;
+                saveToLocalStorage();
             }
         } else {
+            // First time launch -> seed sample data
             const initial = getInitialSampleData();
             state.seminars = initial.seminars;
             state.tugas = initial.tugas;
             state.jadwal = initial.jadwal;
             state.profile = initial.profile;
+            saveToLocalStorage();
         }
         renderAll();
     };
