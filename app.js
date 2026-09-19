@@ -1552,8 +1552,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast(`Modus tampilan diubah ke ${isLight ? 'Terang' : 'Gelap'}`);
     });
 
-    document.getElementById('mobile-toggle').addEventListener('click', () => {
-        document.querySelector('.sidebar').classList.toggle('open');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const closeBtn = document.getElementById('sidebar-close-btn');
+
+    const toggleSidebar = () => {
+        const isOpen = sidebar.classList.toggle('open');
+        if (overlay) {
+            overlay.classList.toggle('show', isOpen);
+        }
+    };
+
+    const closeSidebar = () => {
+        if (sidebar) sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('show');
+    };
+
+    const mobileToggle = document.getElementById('mobile-toggle');
+    if (mobileToggle) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSidebar();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeSidebar);
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+    }
+
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 992) {
+                closeSidebar();
+            }
+        });
     });
 
     document.getElementById('settings-btn').addEventListener('click', () => openModal('modal-settings'));

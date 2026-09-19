@@ -1529,13 +1529,57 @@ label {
     background: var(--accent-pink);
 }
 
+/* Mobile Sidebar Close Button & Overlay Backdrop */
+.sidebar-close-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.6rem;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 0.2rem 0.5rem;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+}
+
+.sidebar-close-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 99;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.show {
+    display: block;
+    opacity: 1;
+}
+
 /* Responsive Media Queries */
 @media (max-width: 992px) {
     .sidebar {
         transform: translateX(-100%);
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
     }
     .sidebar.open {
         transform: translateX(0);
+    }
+    .sidebar-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .main-content {
         margin-left: 0;
