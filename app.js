@@ -321,11 +321,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (fbConfig) {
-            document.getElementById('fb-apiKey').value = fbConfig.apiKey || '';
-            document.getElementById('fb-authDomain').value = fbConfig.authDomain || '';
-            document.getElementById('fb-projectId').value = fbConfig.projectId || '';
-            document.getElementById('fb-storageBucket').value = fbConfig.storageBucket || '';
-            document.getElementById('fb-appId').value = fbConfig.appId || '';
+            const apiEl = document.getElementById('fb-apiKey');
+            if (apiEl) apiEl.value = fbConfig.apiKey || '';
+            const authEl = document.getElementById('fb-authDomain');
+            if (authEl) authEl.value = fbConfig.authDomain || '';
+            const projEl = document.getElementById('fb-projectId');
+            if (projEl) projEl.value = fbConfig.projectId || '';
+            const storeEl = document.getElementById('fb-storageBucket');
+            if (storeEl) storeEl.value = fbConfig.storageBucket || '';
+            const appEl = document.getElementById('fb-appId');
+            if (appEl) appEl.value = fbConfig.appId || '';
         }
 
         // ALWAYS load local data first for instant UI rendering
@@ -556,26 +561,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Save Firebase Config Form Handler
-    document.getElementById('form-firebase-config').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const config = {
-            apiKey: document.getElementById('fb-apiKey').value.trim(),
-            authDomain: document.getElementById('fb-authDomain').value.trim(),
-            projectId: document.getElementById('fb-projectId').value.trim(),
-            storageBucket: document.getElementById('fb-storageBucket').value.trim(),
-            appId: document.getElementById('fb-appId').value.trim()
-        };
+    const formFbConfig = document.getElementById('form-firebase-config');
+    if (formFbConfig) {
+        formFbConfig.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const config = {
+                apiKey: document.getElementById('fb-apiKey')?.value.trim() || '',
+                authDomain: document.getElementById('fb-authDomain')?.value.trim() || '',
+                projectId: document.getElementById('fb-projectId')?.value.trim() || '',
+                storageBucket: document.getElementById('fb-storageBucket')?.value.trim() || '',
+                appId: document.getElementById('fb-appId')?.value.trim() || ''
+            };
 
-        if (!config.apiKey || !config.projectId) {
-            alert('Harap isi minimal API Key dan Project ID Firebase Anda!');
-            return;
-        }
+            if (!config.apiKey || !config.projectId) {
+                alert('Harap isi minimal API Key dan Project ID Firebase Anda!');
+                return;
+            }
 
-        localStorage.setItem('campusflow_firebase_config', JSON.stringify(config));
-        showToast('Konfigurasi Firebase tersimpan! Menghubungkan ke Cloud...', 'info');
-        closeModal('modal-settings');
-        await initFirebaseCloud();
-    });
+            localStorage.setItem('campusflow_firebase_config', JSON.stringify(config));
+            showToast('Konfigurasi Firebase tersimpan! Menghubungkan ke Cloud...', 'info');
+            closeModal('modal-settings');
+            await initFirebaseCloud();
+        });
+    }
 
     // Toast Notification System
     const showToast = (message, type = 'info') => {
@@ -1592,10 +1600,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    document.getElementById('settings-btn').addEventListener('click', () => openModal('modal-settings'));
-    document.getElementById('db-status-pill').addEventListener('click', () => openModal('modal-settings'));
+    document.getElementById('settings-btn')?.addEventListener('click', () => openModal('modal-settings'));
+    document.getElementById('db-status-pill')?.addEventListener('click', () => openModal('modal-settings'));
 
-    document.getElementById('btn-reset-sample').addEventListener('click', async () => {
+    document.getElementById('btn-reset-sample')?.addEventListener('click', async () => {
         if (confirm('Atur ulang seluruh data ke data contoh awal?')) {
             const initial = getInitialSampleData();
             state.seminars = initial.seminars;
@@ -1610,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    document.getElementById('btn-export-data').addEventListener('click', () => {
+    document.getElementById('btn-export-data')?.addEventListener('click', () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
@@ -1621,7 +1629,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('File backup JSON berhasil diunduh!', 'success');
     });
 
-    document.getElementById('input-import-file').addEventListener('change', (e) => {
+    document.getElementById('input-import-file')?.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
