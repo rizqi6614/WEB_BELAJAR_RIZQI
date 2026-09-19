@@ -1010,11 +1010,17 @@ body {
 
 .filter-tabs {
     display: flex;
-    gap: 0.4rem;
+    gap: 0.5rem;
     overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.3rem;
+    scrollbar-width: thin;
 }
 
 .filter-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
     padding: 0.45rem 0.95rem;
     border-radius: var(--radius-sm);
     border: none;
@@ -1228,10 +1234,15 @@ body {
     gap: 0.5rem;
     margin-bottom: 1.5rem;
     overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
     padding-bottom: 0.5rem;
+    scrollbar-width: thin;
 }
 
 .day-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
     padding: 0.65rem 1.4rem;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);

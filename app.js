@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             try { fbConfig = JSON.parse(savedConfigStr); } catch (e) { fbConfig = null; }
         }
 
-        if (!fbConfig) {
+        if (!fbConfig || !fbConfig.apiKey || fbConfig.apiKey.length < 20) {
             fbConfig = defaultFirebaseConfig;
             localStorage.setItem('campusflow_firebase_config', JSON.stringify(defaultFirebaseConfig));
         }
